@@ -1,61 +1,73 @@
+import { useState } from "react";
 import Icon from "@/components/ui/icon";
-
-interface Product {
-  id: number;
-  name: string;
-  price: number;
-  oldPrice?: number | null;
-  rating: number;
-  reviews: number;
-  seller: string;
-  verified: boolean;
-  image: string;
-  badge?: string | null;
-  badgeType?: string | null;
-  inStock: boolean;
-  weight?: string;
-}
+import { Product } from "@/lib/api";
 
 interface ProductCardProps {
   product: Product;
   onAddToCart?: (product: Product) => void;
+  onToggleFavorite?: (productId: number) => void;
+  isFavorite?: boolean;
   onClick?: () => void;
 }
 
-const badgeColors: Record<string, string> = {
-  gold: "bg-brand-gold text-brand-dark",
-  green: "gradient-card border border-green-200 text-green-700",
-  coral: "bg-brand-coral text-white",
+const badgeStyles: Record<string, string> = {
+  gold: "bg-amber-400 text-amber-900",
+  green: "bg-green-100 text-green-700",
+  coral: "bg-orange-100 text-orange-700",
 };
 
-export default function ProductCard({ product, onAddToCart, onClick }: ProductCardProps) {
-  const discount = product.oldPrice
-    ? Math.round((1 - product.price / product.oldPrice) * 100)
+export default function ProductCard({ product, onAddToCart, onToggleFavorite, isFavorite, onClick }: ProductCardProps) {
+  const [added, setAdded] = useState(false);
+
+  const discount = product.old_price
+    ? Math.round((1 - product.price / product.old_price) * 100)
     : null;
+
+  const handleAddToCart = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!product.in_stock || !onAddToCart) return;
+    onAddToCart(product);
+    setAdded(true);
+    setTimeout(() => setAdded(false), 1500);
+  };
 
   return (
     <div
-      className="product-card bg-white rounded-2xl overflow-hidden border border-border cursor-pointer hover:border-brand-green/30"
+      className="bg-white rounded-xl border overflow-hidden cursor-pointer group transition-all hover:shadow-lg hover:-translate-y-0.5"
+      style={{ borderColor: "var(--ozon-border)" }}
       onClick={onClick}
     >
-      {/* Image area */}
-      <div className="relative h-44 bg-gradient-to-br from-brand-cream to-amber-50 flex items-center justify-center">
-        <span className="text-6xl">{product.image}</span>
-        {product.badge && (
-          <div className={`absolute top-3 left-3 text-xs font-bold px-2.5 py-1 rounded-full ${
-            badgeColors[product.badgeType || "green"] || "bg-muted text-foreground"
-          }`}>
-            {product.badge}
-          </div>
-        )}
+      {/* Image */}
+      <div className="relative h-44 flex items-center justify-center" style={{ backgroundColor: "var(--ozon-surface)" }}>
+        <span className="text-6xl">{product.image_emoji || "📦"}</span>
+
+        {/* Badges */}
         {discount && (
-          <div className="absolute top-3 right-3 bg-brand-coral text-white text-xs font-bold px-2 py-0.5 rounded-full">
+          <div className="absolute top-2 left-2 bg-[var(--ozon-orange)] text-white text-xs font-bold px-2 py-0.5 rounded-md">
             -{discount}%
           </div>
         )}
-        {!product.inStock && (
-          <div className="absolute inset-0 bg-white/60 backdrop-blur-sm flex items-center justify-center">
-            <span className="text-sm font-semibold text-muted-foreground bg-white px-3 py-1 rounded-full border">
+        {product.badge && !discount && (
+          <div className={`absolute top-2 left-2 text-xs font-bold px-2 py-0.5 rounded-md ${badgeStyles[product.badge_type || "green"]}`}>
+            {product.badge}
+          </div>
+        )}
+
+        {/* Favorite */}
+        <button
+          onClick={e => { e.stopPropagation(); onToggleFavorite?.(product.id); }}
+          className="absolute top-2 right-2 w-7 h-7 bg-white rounded-full shadow flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:scale-110"
+        >
+          <Icon
+            name="Heart"
+            size={14}
+            className={isFavorite ? "fill-red-500 text-red-500" : "text-gray-400"}
+          />
+        </button>
+
+        {!product.in_stock && (
+          <div className="absolute inset-0 bg-white/70 flex items-center justify-center">
+            <span className="text-sm font-golos font-semibold text-gray-500 bg-white px-3 py-1 rounded-full border text-center">
               Нет в наличии
             </span>
           </div>
@@ -63,64 +75,74 @@ export default function ProductCard({ product, onAddToCart, onClick }: ProductCa
       </div>
 
       {/* Content */}
-      <div className="p-4">
-        <p className="text-[11px] text-muted-foreground mb-1 font-golos">
-          {product.weight}
-        </p>
-        <h3 className="font-semibold text-foreground text-sm leading-snug mb-2 font-golos line-clamp-2">
-          {product.name}
-        </h3>
-
-        {/* Rating */}
-        <div className="flex items-center gap-1.5 mb-3">
-          <div className="flex">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <Icon
-                key={i}
-                name="Star"
-                size={12}
-                className={i < Math.floor(product.rating) ? "text-brand-gold fill-brand-gold" : "text-gray-200 fill-gray-200"}
-              />
-            ))}
-          </div>
-          <span className="text-xs text-muted-foreground font-golos">
-            {product.rating} ({product.reviews})
+      <div className="p-3">
+        {/* Price */}
+        <div className="flex items-end gap-2 mb-1">
+          <span className="text-xl font-bold font-golos" style={{ color: "var(--ozon-text)" }}>
+            {product.price.toLocaleString()} ₽
           </span>
-        </div>
-
-        {/* Seller */}
-        <div className="flex items-center gap-1.5 mb-3">
-          <span className="text-xs text-muted-foreground font-golos truncate">{product.seller}</span>
-          {product.verified && (
-            <span className="badge-verified flex-shrink-0">
-              <Icon name="BadgeCheck" size={9} /> ✓
+          {product.old_price && (
+            <span className="text-sm font-golos line-through" style={{ color: "var(--ozon-text-secondary)" }}>
+              {product.old_price.toLocaleString()} ₽
             </span>
           )}
         </div>
 
-        {/* Price + Cart */}
-        <div className="flex items-center justify-between">
-          <div>
-            <div className="text-lg font-bold text-foreground font-golos">
-              {product.price.toLocaleString()} ₽
-            </div>
-            {product.oldPrice && (
-              <div className="text-xs text-muted-foreground line-through font-golos">
-                {product.oldPrice.toLocaleString()} ₽
-              </div>
-            )}
+        {/* Name */}
+        <h3 className="text-sm font-golos leading-snug line-clamp-2 mb-2" style={{ color: "var(--ozon-text)" }}>
+          {product.name}
+        </h3>
+
+        {/* Rating */}
+        <div className="flex items-center gap-1.5 mb-2">
+          <div className="flex gap-0.5">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <Icon key={i} name="Star" size={11}
+                className={i < Math.floor(product.rating) ? "fill-amber-400 text-amber-400" : "fill-gray-200 text-gray-200"} />
+            ))}
           </div>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              if (product.inStock && onAddToCart) onAddToCart(product);
-            }}
-            disabled={!product.inStock}
-            className="w-10 h-10 rounded-xl bg-brand-green hover:bg-green-700 disabled:bg-muted text-white flex items-center justify-center transition-all hover:scale-105 active:scale-95"
-          >
-            <Icon name="Plus" size={18} />
-          </button>
+          <span className="text-xs font-golos" style={{ color: "var(--ozon-text-secondary)" }}>
+            {product.rating} ({product.reviews_count})
+          </span>
         </div>
+
+        {/* Seller */}
+        <div className="flex items-center gap-1 mb-3">
+          <span className="text-xs font-golos truncate" style={{ color: "var(--ozon-text-secondary)" }}>{product.seller_name}</span>
+          {product.seller_verified && (
+            <Icon name="BadgeCheck" size={12} className="text-blue-500 flex-shrink-0" />
+          )}
+        </div>
+
+        {/* Delivery badges */}
+        <div className="flex flex-wrap gap-1 mb-3">
+          {product.has_personal_delivery && (
+            <span className="text-[10px] bg-blue-50 text-blue-600 font-golos px-2 py-0.5 rounded-full">
+              🤝 Личная доставка
+            </span>
+          )}
+          {product.in_stock && (
+            <span className="text-[10px] font-golos px-2 py-0.5 rounded-full" style={{ backgroundColor: "#e6f7e6", color: "var(--ozon-green)" }}>
+              В наличии
+            </span>
+          )}
+        </div>
+
+        {/* Add to cart */}
+        <button
+          onClick={handleAddToCart}
+          disabled={!product.in_stock}
+          className={`w-full py-2 rounded-lg text-sm font-golos font-semibold transition-all ${
+            added
+              ? "bg-green-500 text-white"
+              : product.in_stock
+              ? "text-white hover:opacity-90 active:scale-95"
+              : "bg-gray-100 text-gray-400 cursor-not-allowed"
+          }`}
+          style={product.in_stock && !added ? { backgroundColor: "var(--ozon-blue)" } : {}}
+        >
+          {added ? "✓ Добавлено" : product.in_stock ? "В корзину" : "Нет в наличии"}
+        </button>
       </div>
     </div>
   );

@@ -43,13 +43,32 @@
     --sidebar-border: 160 25% 18%;
     --sidebar-ring: 40 80% 52%;
 
-    /* Custom brand colors */
+    /* Ozon-style brand palette */
     --brand-green: #1a6640;
     --brand-gold: #e8a020;
     --brand-coral: #e85520;
     --brand-teal: #0d9488;
     --brand-cream: #faf7f0;
     --brand-dark: #0d2118;
+
+    /* Ozon primary */
+    --ozon-blue: #005bff;
+    --ozon-blue-dark: #0041cc;
+    --ozon-blue-light: #e8f0ff;
+    --ozon-orange: #ff6a00;
+    --ozon-green: #00b800;
+    --ozon-red: #e60000;
+    --ozon-surface: #f5f5f5;
+    --ozon-border: #e0e0e0;
+    --ozon-text: #1a1a1a;
+    --ozon-text-secondary: #717171;
+
+    /* Override primary to Ozon blue */
+    --primary: 218 100% 50%;
+    --primary-foreground: 0 0% 100%;
+    --background: 0 0% 96%;
+    --accent: 22 100% 50%;
+    --accent-foreground: 0 0% 100%;
   }
 }
 

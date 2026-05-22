@@ -1,10 +1,13 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Icon from "@/components/ui/icon";
 import ProductCard from "@/components/ProductCard";
-import { categories, products } from "@/data/mockData";
+import { api, Product, Category } from "@/lib/api";
 
 interface CatalogPageProps {
-  onAddToCart: (product: (typeof products)[0]) => void;
+  onAddToCart: (product: Product) => void;
+  onToggleFavorite?: (id: number) => void;
+  favorites?: number[];
+  initialSearch?: string;
 }
 
 const sortOptions = [
@@ -14,173 +17,214 @@ const sortOptions = [
   { value: "rating", label: "По рейтингу" },
 ];
 
-export default function CatalogPage({ onAddToCart }: CatalogPageProps) {
-  const [search, setSearch] = useState("");
+const categoryIcons: Record<string, string> = {
+  food: "🍊", spices: "🌶️", wines: "🍷", cosmetics: "🌿",
+  souvenirs: "🏺", textile: "🧵", honey: "🍯", nuts: "🌰",
+};
+
+export default function CatalogPage({ onAddToCart, onToggleFavorite, favorites = [], initialSearch = "" }: CatalogPageProps) {
+  const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState(initialSearch);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [sort, setSort] = useState("popular");
   const [verifiedOnly, setVerifiedOnly] = useState(false);
   const [inStockOnly, setInStockOnly] = useState(false);
-  const [priceRange, setPriceRange] = useState<[number, number]>([0, 2000]);
+  const [minPrice, setMinPrice] = useState("");
+  const [maxPrice, setMaxPrice] = useState("");
   const [showFilters, setShowFilters] = useState(false);
 
-  const filtered = products.filter((p) => {
-    if (search && !p.name.toLowerCase().includes(search.toLowerCase())) return false;
-    if (selectedCategory && p.category !== selectedCategory) return false;
-    if (verifiedOnly && !p.verified) return false;
-    if (inStockOnly && !p.inStock) return false;
-    if (p.price < priceRange[0] || p.price > priceRange[1]) return false;
-    return true;
-  });
+  const fetchProducts = useCallback(async () => {
+    setLoading(true);
+    const params: Record<string, string> = { sort };
+    if (search) params.search = search;
+    if (selectedCategory) params.category = selectedCategory;
+    if (verifiedOnly) params.verified = "true";
+    if (inStockOnly) params.in_stock = "true";
+    if (minPrice) params.min_price = minPrice;
+    if (maxPrice) params.max_price = maxPrice;
+    try {
+      const res = await api.getProducts(params);
+      setProducts(res.products);
+    } finally {
+      setLoading(false);
+    }
+  }, [search, selectedCategory, sort, verifiedOnly, inStockOnly, minPrice, maxPrice]);
 
-  const sorted = [...filtered].sort((a, b) => {
-    if (sort === "price_asc") return a.price - b.price;
-    if (sort === "price_desc") return b.price - a.price;
-    if (sort === "rating") return b.rating - a.rating;
-    return b.reviews - a.reviews;
-  });
+  useEffect(() => {
+    api.getCategories().then(r => setCategories(r.categories)).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    const timer = setTimeout(fetchProducts, 300);
+    return () => clearTimeout(timer);
+  }, [fetchProducts]);
+
+  const resetFilters = () => {
+    setSearch(""); setSelectedCategory(null); setVerifiedOnly(false);
+    setInStockOnly(false); setMinPrice(""); setMaxPrice("");
+  };
 
   return (
-    <div className="bg-brand-cream min-h-screen">
+    <div className="min-h-screen" style={{ backgroundColor: "var(--ozon-surface)" }}>
       {/* Header */}
-      <div className="bg-brand-dark py-10 px-4 sm:px-6">
+      <div className="bg-white border-b py-5 px-4" style={{ borderColor: "var(--ozon-border)" }}>
         <div className="max-w-7xl mx-auto">
-          <h1 className="font-oswald text-4xl font-bold text-white mb-2">Каталог товаров</h1>
-          <p className="text-white/50 font-golos">Найдено {sorted.length} товаров</p>
+          <h1 className="font-oswald text-3xl font-bold mb-4" style={{ color: "var(--ozon-text)" }}>
+            Каталог товаров
+            <span className="ml-3 text-base font-golos font-normal" style={{ color: "var(--ozon-text-secondary)" }}>
+              {loading ? "загрузка..." : `${products.length} товаров`}
+            </span>
+          </h1>
 
           {/* Search */}
-          <div className="mt-6 relative max-w-2xl">
-            <Icon name="Search" size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40" />
+          <div className="relative max-w-2xl">
+            <Icon name="Search" size={17} className="absolute left-4 top-1/2 -translate-y-1/2" style={{ color: "var(--ozon-text-secondary)" }} />
             <input
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Поиск по товарам..."
-              className="w-full pl-12 pr-4 py-3.5 rounded-2xl bg-white/10 border border-white/20 text-white placeholder-white/40 font-golos focus:outline-none focus:border-brand-gold transition-colors"
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Поиск в каталоге..."
+              className="w-full pl-11 pr-4 py-3 rounded-xl border-2 outline-none text-sm font-golos transition-colors"
+              style={{ borderColor: "var(--ozon-border)", color: "var(--ozon-text)" }}
+              onFocus={e => e.target.style.borderColor = "var(--ozon-blue)"}
+              onBlur={e => e.target.style.borderColor = "var(--ozon-border)"}
             />
-            {search && (
-              <button onClick={() => setSearch("")} className="absolute right-4 top-1/2 -translate-y-1/2 text-white/40 hover:text-white">
-                <Icon name="X" size={16} />
-              </button>
-            )}
           </div>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
-        {/* Categories scroll */}
-        <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-2 mb-6">
+      {/* Categories */}
+      <div className="bg-white border-b px-4 py-3" style={{ borderColor: "var(--ozon-border)" }}>
+        <div className="max-w-7xl mx-auto flex gap-2 overflow-x-auto scrollbar-hide">
           <button
             onClick={() => setSelectedCategory(null)}
-            className={`flex-shrink-0 px-4 py-2 rounded-xl text-sm font-golos font-medium transition-all ${
-              !selectedCategory
-                ? "bg-brand-green text-white"
-                : "bg-white border border-border text-foreground hover:border-brand-green"
+            className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-golos font-medium transition-all border ${
+              !selectedCategory ? "text-white border-blue-600" : "bg-white border-gray-200 hover:border-blue-400"
             }`}
+            style={{ backgroundColor: !selectedCategory ? "var(--ozon-blue)" : undefined, color: !selectedCategory ? "white" : "var(--ozon-text)" }}
           >
-            Все
+            Все категории
           </button>
-          {categories.map((cat) => (
+          {categories.map(cat => (
             <button
               key={cat.id}
-              onClick={() => setSelectedCategory(cat.name)}
-              className={`flex-shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-golos font-medium transition-all ${
-                selectedCategory === cat.name
-                  ? "bg-brand-green text-white"
-                  : "bg-white border border-border text-foreground hover:border-brand-green"
+              onClick={() => setSelectedCategory(selectedCategory === cat.slug ? null : cat.slug)}
+              className={`flex-shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-golos font-medium transition-all border ${
+                selectedCategory === cat.slug ? "text-white" : "bg-white border-gray-200 hover:border-blue-400"
               }`}
+              style={{
+                backgroundColor: selectedCategory === cat.slug ? "var(--ozon-blue)" : undefined,
+                color: selectedCategory === cat.slug ? "white" : "var(--ozon-text)",
+                borderColor: selectedCategory === cat.slug ? "var(--ozon-blue)" : undefined
+              }}
             >
-              <span>{cat.icon}</span>
+              <span>{categoryIcons[cat.slug] || "📦"}</span>
               {cat.name}
             </button>
           ))}
         </div>
+      </div>
 
+      <div className="max-w-7xl mx-auto px-4 py-5">
         {/* Toolbar */}
-        <div className="flex items-center justify-between mb-6 gap-4 flex-wrap">
-          <div className="flex items-center gap-3">
+        <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
+          <div className="flex items-center gap-3 flex-wrap">
             <button
               onClick={() => setShowFilters(!showFilters)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-golos font-medium border transition-all ${
-                showFilters ? "bg-brand-green text-white border-brand-green" : "bg-white border-border text-foreground hover:border-brand-green"
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-golos font-medium border transition-all ${
+                showFilters ? "text-white" : "bg-white hover:border-blue-400"
               }`}
+              style={{
+                backgroundColor: showFilters ? "var(--ozon-blue)" : undefined,
+                borderColor: showFilters ? "var(--ozon-blue)" : "var(--ozon-border)"
+              }}
             >
               <Icon name="SlidersHorizontal" size={15} />
               Фильтры
             </button>
-            <label className="flex items-center gap-2 cursor-pointer">
-              <div
-                onClick={() => setVerifiedOnly(!verifiedOnly)}
-                className={`w-10 h-5 rounded-full transition-colors relative ${verifiedOnly ? "bg-brand-green" : "bg-gray-200"}`}
-              >
-                <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-all ${verifiedOnly ? "left-5" : "left-0.5"}`} />
-              </div>
-              <span className="text-sm font-golos text-foreground">Проверенные</span>
-            </label>
-            <label className="flex items-center gap-2 cursor-pointer">
-              <div
-                onClick={() => setInStockOnly(!inStockOnly)}
-                className={`w-10 h-5 rounded-full transition-colors relative ${inStockOnly ? "bg-brand-green" : "bg-gray-200"}`}
-              >
-                <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-all ${inStockOnly ? "left-5" : "left-0.5"}`} />
-              </div>
-              <span className="text-sm font-golos text-foreground">В наличии</span>
-            </label>
+
+            {/* Toggles */}
+            {[
+              { label: "Проверенные", value: verifiedOnly, setter: setVerifiedOnly },
+              { label: "В наличии", value: inStockOnly, setter: setInStockOnly },
+            ].map(toggle => (
+              <label key={toggle.label} className="flex items-center gap-2 cursor-pointer">
+                <div
+                  onClick={() => toggle.setter(!toggle.value)}
+                  className={`w-10 h-5 rounded-full relative transition-colors ${toggle.value ? "" : "bg-gray-200"}`}
+                  style={{ backgroundColor: toggle.value ? "var(--ozon-blue)" : undefined }}
+                >
+                  <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-all ${toggle.value ? "left-5" : "left-0.5"}`} />
+                </div>
+                <span className="text-sm font-golos" style={{ color: "var(--ozon-text)" }}>{toggle.label}</span>
+              </label>
+            ))}
           </div>
 
-          <select
-            value={sort}
-            onChange={(e) => setSort(e.target.value)}
-            className="px-4 py-2 rounded-xl text-sm font-golos border border-border bg-white text-foreground focus:outline-none focus:border-brand-green"
-          >
-            {sortOptions.map((o) => (
-              <option key={o.value} value={o.value}>{o.label}</option>
-            ))}
-          </select>
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-golos hidden sm:block" style={{ color: "var(--ozon-text-secondary)" }}>Сортировка:</span>
+            <select
+              value={sort}
+              onChange={e => setSort(e.target.value)}
+              className="px-3 py-2 rounded-lg text-sm font-golos border bg-white outline-none cursor-pointer"
+              style={{ borderColor: "var(--ozon-border)", color: "var(--ozon-text)" }}
+            >
+              {sortOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+            </select>
+          </div>
         </div>
 
         {/* Extended filters */}
         {showFilters && (
-          <div className="bg-white rounded-2xl border border-border p-5 mb-6 animate-fade-in">
-            <h3 className="font-golos font-semibold text-foreground mb-4">Цена, ₽</h3>
+          <div className="bg-white rounded-xl border p-5 mb-5 animate-fade-in" style={{ borderColor: "var(--ozon-border)" }}>
+            <h3 className="font-golos font-semibold mb-4" style={{ color: "var(--ozon-text)" }}>Цена, ₽</h3>
             <div className="flex items-center gap-4">
-              <input
-                type="number"
-                value={priceRange[0]}
-                onChange={(e) => setPriceRange([Number(e.target.value), priceRange[1]])}
-                className="w-28 px-3 py-2 rounded-lg border border-border font-golos text-sm focus:outline-none focus:border-brand-green"
-                placeholder="От"
-              />
-              <div className="flex-1 h-0.5 bg-gray-200 rounded" />
-              <input
-                type="number"
-                value={priceRange[1]}
-                onChange={(e) => setPriceRange([priceRange[0], Number(e.target.value)])}
-                className="w-28 px-3 py-2 rounded-lg border border-border font-golos text-sm focus:outline-none focus:border-brand-green"
-                placeholder="До"
-              />
+              <input type="number" value={minPrice} onChange={e => setMinPrice(e.target.value)} placeholder="От"
+                className="w-28 px-3 py-2 rounded-lg border text-sm font-golos outline-none" style={{ borderColor: "var(--ozon-border)" }} />
+              <div className="flex-1 h-px bg-gray-200" />
+              <input type="number" value={maxPrice} onChange={e => setMaxPrice(e.target.value)} placeholder="До"
+                className="w-28 px-3 py-2 rounded-lg border text-sm font-golos outline-none" style={{ borderColor: "var(--ozon-border)" }} />
+              <button onClick={() => { setMinPrice(""); setMaxPrice(""); }}
+                className="text-sm font-golos hover:underline" style={{ color: "var(--ozon-blue)" }}>Сбросить</button>
             </div>
           </div>
         )}
 
-        {/* Grid */}
-        {sorted.length === 0 ? (
-          <div className="text-center py-24">
+        {/* Products grid */}
+        {loading ? (
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+            {Array.from({ length: 10 }).map((_, i) => (
+              <div key={i} className="bg-white rounded-xl border h-80 animate-pulse" style={{ borderColor: "var(--ozon-border)" }}>
+                <div className="h-44 rounded-t-xl" style={{ backgroundColor: "var(--ozon-surface)" }} />
+                <div className="p-3 space-y-2">
+                  <div className="h-5 bg-gray-100 rounded w-2/3" />
+                  <div className="h-4 bg-gray-100 rounded w-full" />
+                  <div className="h-4 bg-gray-100 rounded w-3/4" />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : products.length === 0 ? (
+          <div className="text-center py-20">
             <div className="text-5xl mb-4">🔍</div>
-            <h3 className="font-oswald text-2xl font-bold text-foreground mb-2">Ничего не найдено</h3>
-            <p className="text-muted-foreground font-golos">Попробуйте изменить фильтры или поисковый запрос</p>
-            <button
-              onClick={() => { setSearch(""); setSelectedCategory(null); setVerifiedOnly(false); setInStockOnly(false); }}
-              className="mt-4 px-5 py-2.5 bg-brand-green text-white font-golos font-medium rounded-xl hover:bg-green-700 transition-all"
-            >
-              Сбросить всё
+            <h3 className="font-oswald text-2xl font-bold mb-2" style={{ color: "var(--ozon-text)" }}>Ничего не найдено</h3>
+            <p className="font-golos mb-4" style={{ color: "var(--ozon-text-secondary)" }}>Попробуйте изменить фильтры</p>
+            <button onClick={resetFilters}
+              className="px-5 py-2.5 text-white font-golos font-medium rounded-xl hover:opacity-90 transition-all"
+              style={{ backgroundColor: "var(--ozon-blue)" }}>
+              Сбросить все фильтры
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-            {sorted.map((product) => (
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+            {products.map(product => (
               <ProductCard
                 key={product.id}
                 product={product}
                 onAddToCart={onAddToCart}
+                onToggleFavorite={onToggleFavorite}
+                isFavorite={favorites.includes(product.id)}
               />
             ))}
           </div>

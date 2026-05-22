@@ -1,0 +1,4 @@
+ALTER TABLE t_p15847478_abkhazia_marketplace.abk_categories
+  ADD COLUMN IF NOT EXISTS icon_emoji VARCHAR(20) DEFAULT '',
+  ADD COLUMN IF NOT EXISTS products_count INTEGER DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS sort_order INTEGER DEFAULT 0;

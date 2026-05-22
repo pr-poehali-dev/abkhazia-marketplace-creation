@@ -1,0 +1,36 @@
+{
+  "tests": [
+    {
+      "name": "GET categories via action",
+      "method": "GET",
+      "path": "/?action=categories",
+      "expectedStatus": 200,
+      "expectedBody": {"categories": []},
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "GET products via action",
+      "method": "GET",
+      "path": "/?action=products",
+      "expectedStatus": 200,
+      "expectedBody": {"products": []},
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "GET sellers via action",
+      "method": "GET",
+      "path": "/?action=sellers",
+      "expectedStatus": 200,
+      "expectedBody": {"sellers": []},
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "GET reviews",
+      "method": "GET",
+      "path": "/?action=reviews",
+      "expectedStatus": 200,
+      "expectedBody": {"reviews": []},
+      "bodyMatcher": "partial"
+    }
+  ]
+}

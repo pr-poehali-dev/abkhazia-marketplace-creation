@@ -1,82 +1,78 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Icon from "@/components/ui/icon";
 import ProductCard from "@/components/ProductCard";
-import { HERO_IMAGE, PRODUCTS_IMAGE, DELIVERY_IMAGE, categories, products } from "@/data/mockData";
+import { HERO_IMAGE, PRODUCTS_IMAGE, DELIVERY_IMAGE } from "@/data/mockData";
+import { api, Product, Category } from "@/lib/api";
 
 interface HomePageProps {
   onNavigate: (page: string) => void;
-  onAddToCart: (product: any) => void;
+  onAddToCart: (product: Product) => void;
 }
 
+const categoryIcons: Record<string, string> = {
+  food: "🍊", spices: "🌶️", wines: "🍷", cosmetics: "🌿",
+  souvenirs: "🏺", textile: "🧵", honey: "🍯", nuts: "🌰",
+};
+
 export default function HomePage({ onNavigate, onAddToCart }: HomePageProps) {
+  const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [email, setEmail] = useState("");
 
+  useEffect(() => {
+    api.getProducts({ sort: "popular", limit: "8", in_stock: "true" }).then(r => setProducts(r.products)).catch(() => {});
+    api.getCategories().then(r => setCategories(r.categories)).catch(() => {});
+  }, []);
+
   return (
-    <div className="bg-brand-cream">
-      {/* Hero */}
-      <section className="relative min-h-[88vh] flex items-center overflow-hidden mesh-bg">
-        <div
-          className="absolute inset-0 bg-cover bg-center opacity-20"
-          style={{ backgroundImage: `url(${HERO_IMAGE})` }}
-        />
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-brand-dark/30 to-brand-dark/80" />
+    <div style={{ backgroundColor: "var(--ozon-surface)" }}>
+      {/* Hero — Ozon-style with big search and promo */}
+      <section className="relative overflow-hidden">
+        <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url(${HERO_IMAGE})`, opacity: 0.15 }} />
+        <div className="absolute inset-0" style={{ background: "linear-gradient(135deg, #0041cc 0%, #005bff 50%, #0d9488 100%)" }} />
 
-        {/* Floating badges */}
-        <div className="absolute top-20 right-8 sm:right-16 glass-card rounded-2xl px-4 py-3 animate-fade-in hidden sm:block">
-          <div className="text-white/60 text-xs font-golos mb-0.5">Проверенных продавцов</div>
-          <div className="text-white font-bold text-xl font-oswald">248+</div>
-        </div>
-        <div className="absolute bottom-32 right-8 sm:right-24 glass-card rounded-2xl px-4 py-3 animate-fade-in hidden sm:block" style={{animationDelay: '0.3s'}}>
-          <div className="text-white/60 text-xs font-golos mb-0.5">Успешных доставок</div>
-          <div className="text-white font-bold text-xl font-oswald">12,400+</div>
-        </div>
-
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 py-24 w-full">
-          <div className="max-w-3xl">
-            <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-full px-4 py-1.5 mb-8 animate-fade-up">
+        <div className="relative max-w-7xl mx-auto px-4 py-14 sm:py-20">
+          <div className="max-w-2xl">
+            <div className="inline-flex items-center gap-2 bg-white/15 rounded-full px-3 py-1 text-white/80 text-xs font-golos mb-5">
               <span className="relative flex h-2 w-2">
-                <span className="pulse-dot animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-green-400"></span>
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-green-400" />
               </span>
-              <span className="text-white/80 text-xs font-golos tracking-wide">Первый маркетплейс Абхазии</span>
+              Первый маркетплейс Абхазии · {products.length || "8"}+ товаров онлайн
             </div>
 
-            <h1 className="font-oswald text-5xl sm:text-7xl font-bold text-white leading-none mb-4 animate-fade-up animate-fade-up-delay-1">
+            <h1 className="font-oswald text-5xl sm:text-7xl font-bold text-white leading-none mb-4">
               Лучшие товары
               <br />
-              <span className="shimmer-text">Абхазии</span>
+              <span className="text-amber-300">Абхазии</span>
               <br />
-              <span className="text-white">у вас дома</span>
+              с доставкой
             </h1>
-            <p className="text-white/60 text-lg font-golos max-w-xl mb-10 animate-fade-up animate-fade-up-delay-2">
-              Натуральный мёд, домашняя аджика, местные вина — всё с доставкой. Только проверенные продавцы.
+            <p className="text-white/70 font-golos text-base mb-8 max-w-lg">
+              Натуральный мёд, домашняя аджика, местные вина — всё с доставкой. Только проверенные продавцы с верификацией.
             </p>
 
-            <div className="flex flex-col sm:flex-row gap-4 animate-fade-up animate-fade-up-delay-3">
+            {/* Ozon-style search */}
+            <div className="flex gap-2 max-w-xl bg-white rounded-2xl p-2 shadow-2xl mb-8">
+              <input placeholder="Поиск товаров Абхазии..."
+                className="flex-1 px-3 py-2 text-sm font-golos outline-none rounded-xl"
+                style={{ color: "var(--ozon-text)" }}
+                onKeyDown={e => e.key === "Enter" && onNavigate("catalog")} />
               <button
                 onClick={() => onNavigate("catalog")}
-                className="px-8 py-4 bg-brand-gold hover:bg-yellow-400 text-brand-dark font-bold font-golos rounded-2xl text-base transition-all hover:scale-105 active:scale-95 shadow-2xl shadow-brand-gold/30"
-              >
-                Перейти в каталог →
-              </button>
-              <button
-                onClick={() => onNavigate("sellers")}
-                className="px-8 py-4 glass-card hover:bg-white/15 text-white font-golos font-medium rounded-2xl text-base transition-all"
-              >
-                Наши продавцы
+                className="px-5 py-2 text-white rounded-xl text-sm font-golos font-semibold transition-all hover:opacity-90"
+                style={{ backgroundColor: "var(--ozon-blue)" }}>
+                Найти
               </button>
             </div>
 
-            {/* Stats */}
-            <div className="flex flex-wrap gap-8 mt-14 animate-fade-up animate-fade-up-delay-4">
+            <div className="flex flex-wrap gap-5">
               {[
-                { num: "1500+", label: "Товаров" },
-                { num: "248", label: "Продавцов" },
-                { num: "4.9★", label: "Средний рейтинг" },
-                { num: "1-3", label: "Дня доставка" },
-              ].map((s) => (
+                { num: "1500+", label: "Товаров" }, { num: "248", label: "Продавцов" },
+                { num: "4.8★", label: "Рейтинг" }, { num: "1-3 дн", label: "Доставка" },
+              ].map(s => (
                 <div key={s.label}>
-                  <div className="text-2xl font-bold font-oswald text-brand-gold">{s.num}</div>
+                  <div className="text-2xl font-bold font-oswald text-amber-300">{s.num}</div>
                   <div className="text-white/50 text-xs font-golos">{s.label}</div>
                 </div>
               ))}
@@ -85,159 +81,153 @@ export default function HomePage({ onNavigate, onAddToCart }: HomePageProps) {
         </div>
       </section>
 
-      {/* Categories */}
-      <section className="py-16 px-4 sm:px-6 max-w-7xl mx-auto">
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h2 className="font-oswald text-3xl font-bold text-foreground">Категории</h2>
-            <p className="text-muted-foreground text-sm font-golos mt-1">Выберите то, что вас интересует</p>
-          </div>
-          <button
-            onClick={() => onNavigate("catalog")}
-            className="text-brand-green hover:text-green-700 text-sm font-golos font-medium flex items-center gap-1"
-          >
-            Все <Icon name="ChevronRight" size={16} />
+      {/* Banner row — Ozon style */}
+      <div className="bg-white border-b px-4 py-3" style={{ borderColor: "var(--ozon-border)" }}>
+        <div className="max-w-7xl mx-auto flex items-center justify-between gap-4 overflow-x-auto scrollbar-hide">
+          {[
+            { icon: "Truck", text: "Доставка 1-3 дня", sub: "По всей Абхазии" },
+            { icon: "BadgeCheck", text: "Проверенные продавцы", sub: "Верификация документов" },
+            { icon: "RotateCcw", text: "Гарантия возврата", sub: "14 дней" },
+            { icon: "Shield", text: "Безопасная оплата", sub: "Защита покупателя" },
+          ].map(item => (
+            <div key={item.text} className="flex items-center gap-3 flex-shrink-0 py-1">
+              <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{ backgroundColor: "var(--ozon-blue-light)" }}>
+                <Icon name={item.icon as "Truck"} size={18} style={{ color: "var(--ozon-blue)" }} />
+              </div>
+              <div>
+                <div className="text-sm font-golos font-semibold" style={{ color: "var(--ozon-text)" }}>{item.text}</div>
+                <div className="text-xs font-golos" style={{ color: "var(--ozon-text-secondary)" }}>{item.sub}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Categories grid */}
+      <section className="py-8 px-4 max-w-7xl mx-auto">
+        <div className="flex items-center justify-between mb-5">
+          <h2 className="font-oswald text-2xl font-bold" style={{ color: "var(--ozon-text)" }}>Категории</h2>
+          <button onClick={() => onNavigate("catalog")} className="text-sm font-golos flex items-center gap-1 hover:underline" style={{ color: "var(--ozon-blue)" }}>
+            Смотреть все <Icon name="ChevronRight" size={15} />
           </button>
         </div>
-
-        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
-          {categories.map((cat, i) => (
+        <div className="grid grid-cols-4 sm:grid-cols-8 gap-3">
+          {(categories.length > 0 ? categories : Array.from({length: 8}, (_, i) => ({id: i, name: "...", slug: "", products_count: 0, sort_order: i, icon_emoji: "📦"}))).map(cat => (
             <button
               key={cat.id}
               onClick={() => onNavigate("catalog")}
-              className="bg-white hover:bg-brand-green group rounded-2xl p-4 text-center transition-all hover:scale-105 hover:shadow-lg border border-border hover:border-brand-green"
-              style={{ animationDelay: `${i * 0.05}s` }}
+              className="bg-white rounded-xl border p-3 text-center transition-all hover:shadow-md hover:-translate-y-0.5 group"
+              style={{ borderColor: "var(--ozon-border)" }}
             >
-              <div className="text-3xl mb-2">{cat.icon}</div>
-              <div className="text-xs font-golos font-semibold text-foreground group-hover:text-white leading-tight">{cat.name}</div>
-              <div className="text-[10px] text-muted-foreground group-hover:text-white/60 font-golos mt-0.5">{cat.count} тов.</div>
+              <div className="text-3xl mb-1.5">{categoryIcons[cat.slug] || "📦"}</div>
+              <div className="text-xs font-golos font-medium leading-tight" style={{ color: "var(--ozon-text)" }}>{cat.name || "..."}</div>
+              {cat.products_count > 0 && (
+                <div className="text-[10px] font-golos mt-0.5" style={{ color: "var(--ozon-text-secondary)" }}>{cat.products_count}</div>
+              )}
             </button>
           ))}
         </div>
       </section>
 
-      {/* Products */}
-      <section className="py-8 px-4 sm:px-6 max-w-7xl mx-auto">
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h2 className="font-oswald text-3xl font-bold text-foreground">Популярное</h2>
-            <p className="text-muted-foreground text-sm font-golos mt-1">Самые продаваемые товары</p>
-          </div>
-          <button
-            onClick={() => onNavigate("catalog")}
-            className="text-brand-green hover:text-green-700 text-sm font-golos font-medium flex items-center gap-1"
-          >
-            Смотреть все <Icon name="ChevronRight" size={16} />
+      {/* Popular products */}
+      <section className="py-4 px-4 max-w-7xl mx-auto">
+        <div className="flex items-center justify-between mb-5">
+          <h2 className="font-oswald text-2xl font-bold" style={{ color: "var(--ozon-text)" }}>Популярные товары</h2>
+          <button onClick={() => onNavigate("catalog")} className="text-sm font-golos flex items-center gap-1 hover:underline" style={{ color: "var(--ozon-blue)" }}>
+            Все товары <Icon name="ChevronRight" size={15} />
           </button>
         </div>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-          {products.slice(0, 8).map((product) => (
-            <ProductCard
-              key={product.id}
-              product={product}
-              onAddToCart={onAddToCart}
-              onClick={() => onNavigate("catalog")}
-            />
-          ))}
-        </div>
+        {products.length > 0 ? (
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+            {products.slice(0, 10).map(product => (
+              <ProductCard key={product.id} product={product} onAddToCart={onAddToCart} onClick={() => onNavigate("catalog")} />
+            ))}
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            {Array.from({length: 8}).map((_, i) => (
+              <div key={i} className="bg-white rounded-xl border h-72 animate-pulse" style={{ borderColor: "var(--ozon-border)" }} />
+            ))}
+          </div>
+        )}
       </section>
 
-      {/* Delivery banner */}
-      <section className="py-16 px-4 sm:px-6 max-w-7xl mx-auto">
-        <div className="relative rounded-3xl overflow-hidden">
-          <div
-            className="absolute inset-0 bg-cover bg-center opacity-30"
-            style={{ backgroundImage: `url(${DELIVERY_IMAGE})` }}
-          />
-          <div className="relative mesh-bg rounded-3xl p-8 sm:p-12 grid sm:grid-cols-2 gap-8 items-center">
-            <div>
-              <div className="inline-flex items-center gap-2 bg-brand-gold text-brand-dark rounded-full px-3 py-1 text-xs font-bold font-golos mb-4">
-                ⚡ Быстрая доставка
-              </div>
-              <h2 className="font-oswald text-4xl font-bold text-white mb-4">
-                Доставляем<br />по всей Абхазии
-              </h2>
-              <p className="text-white/60 font-golos mb-6">
-                Курьерская, личная доставка от продавца и самовывоз. Отслеживайте заказ в реальном времени.
-              </p>
-              <div className="flex flex-wrap gap-3">
-                {["🛵 Курьер", "🤝 Личная доставка", "🏪 Самовывоз", "⚡ Экспресс"].map((m) => (
-                  <span key={m} className="glass-card text-white text-sm px-3 py-1.5 rounded-full font-golos">
-                    {m}
-                  </span>
-                ))}
-              </div>
-              <button
-                onClick={() => onNavigate("delivery")}
-                className="mt-6 px-6 py-3 bg-brand-gold hover:bg-yellow-400 text-brand-dark font-bold font-golos rounded-xl transition-all hover:scale-105"
-              >
-                Подробнее о доставке
+      {/* Delivery promo */}
+      <section className="py-8 px-4 max-w-7xl mx-auto">
+        <div className="grid sm:grid-cols-2 gap-4">
+          {/* Delivery banner */}
+          <div className="relative rounded-2xl overflow-hidden h-48">
+            <div className="absolute inset-0 bg-cover bg-center opacity-30" style={{ backgroundImage: `url(${DELIVERY_IMAGE})` }} />
+            <div className="absolute inset-0" style={{ background: "linear-gradient(135deg, #005bff, #0d9488)" }} />
+            <div className="relative p-6">
+              <div className="text-white/70 text-xs font-golos mb-1">🚚 Доставка</div>
+              <h3 className="font-oswald text-2xl font-bold text-white mb-2">До вашей двери</h3>
+              <p className="text-white/70 text-sm font-golos mb-4">Курьер, личная доставка, самовывоз</p>
+              <button onClick={() => onNavigate("delivery")}
+                className="px-4 py-2 bg-white text-sm font-golos font-semibold rounded-lg hover:bg-gray-100 transition-all"
+                style={{ color: "var(--ozon-blue)" }}>
+                Подробнее
               </button>
             </div>
-            <div className="hidden sm:flex justify-center">
-              <img src={DELIVERY_IMAGE} alt="Доставка" className="w-72 h-72 object-cover rounded-2xl opacity-80" />
+          </div>
+
+          {/* Sellers banner */}
+          <div className="relative rounded-2xl overflow-hidden h-48">
+            <div className="absolute inset-0 bg-cover bg-center opacity-20" style={{ backgroundImage: `url(${PRODUCTS_IMAGE})` }} />
+            <div className="absolute inset-0 rounded-2xl" style={{ backgroundColor: "var(--ozon-orange)", opacity: 0.9 }} />
+            <div className="relative p-6">
+              <div className="text-white/70 text-xs font-golos mb-1">✅ Верификация</div>
+              <h3 className="font-oswald text-2xl font-bold text-white mb-2">Только настоящие товары</h3>
+              <p className="text-white/70 text-sm font-golos mb-4">Проверяем каждого продавца лично</p>
+              <button onClick={() => onNavigate("sellers")}
+                className="px-4 py-2 bg-white text-sm font-golos font-semibold rounded-lg hover:bg-gray-100 transition-all"
+                style={{ color: "var(--ozon-orange)" }}>
+                Наши продавцы
+              </button>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Products showcase */}
-      <section className="py-8 pb-16 px-4 sm:px-6 max-w-7xl mx-auto">
-        <div className="rounded-3xl overflow-hidden bg-white border border-border p-8 grid sm:grid-cols-2 gap-8 items-center">
-          <img src={PRODUCTS_IMAGE} alt="Товары Абхазии" className="w-full h-64 object-cover rounded-2xl" />
+      {/* Personal delivery section — unique feature */}
+      <section className="py-8 px-4 max-w-7xl mx-auto">
+        <div className="rounded-2xl p-8 sm:p-10 grid sm:grid-cols-2 gap-6 items-center" style={{ backgroundColor: "var(--ozon-blue)" }}>
           <div>
-            <div className="inline-flex items-center gap-2 bg-green-50 text-brand-green rounded-full px-3 py-1 text-xs font-bold font-golos mb-4">
-              <Icon name="BadgeCheck" size={13} /> Проверено командой
+            <div className="inline-flex items-center gap-2 bg-white/15 text-white rounded-full px-3 py-1 text-xs font-golos mb-4">
+              ⭐ Уникальная функция
             </div>
-            <h2 className="font-oswald text-3xl font-bold text-foreground mb-4">
-              Только настоящие товары из Абхазии
-            </h2>
-            <p className="text-muted-foreground font-golos mb-4">
-              Каждый продавец проходит верификацию — мы проверяем документы и реальное нахождение в Абхазии. Гарантируем подлинность.
+            <h2 className="font-oswald text-3xl font-bold text-white mb-3">Личная доставка от продавца</h2>
+            <p className="text-white/70 font-golos text-sm mb-5">
+              Продавец доставляет сам — вы познакомитесь лично, зададите вопросы и убедитесь в качестве прямо при получении. Бесплатно.
             </p>
-            <ul className="space-y-2 mb-6">
-              {[
-                "Проверка паспорта и ИНН",
-                "Реальная съёмка товаров",
-                "Система отзывов покупателей",
-                "Гарантия возврата"
-              ].map((item) => (
-                <li key={item} className="flex items-center gap-2 text-sm font-golos text-foreground">
-                  <div className="w-5 h-5 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
-                    <Icon name="Check" size={11} className="text-brand-green" />
-                  </div>
-                  {item}
-                </li>
+            <div className="flex flex-wrap gap-2 mb-5">
+              {["🆓 Бесплатно", "🤝 Личное знакомство", "💬 Ответы на вопросы", "✅ Проверка при получении"].map(tag => (
+                <span key={tag} className="bg-white/15 text-white text-xs font-golos px-3 py-1 rounded-full">{tag}</span>
               ))}
-            </ul>
-            <button
-              onClick={() => onNavigate("sellers")}
-              className="px-6 py-3 bg-brand-green hover:bg-green-700 text-white font-bold font-golos rounded-xl transition-all hover:scale-105"
-            >
-              Наши продавцы
+            </div>
+            <button onClick={() => onNavigate("delivery")}
+              className="px-5 py-3 font-bold font-golos rounded-xl hover:opacity-90 transition-all"
+              style={{ backgroundColor: "var(--ozon-orange)", color: "white" }}>
+              Узнать больше
             </button>
+          </div>
+          <div className="hidden sm:flex justify-center">
+            <div className="w-40 h-40 rounded-3xl bg-white/10 flex items-center justify-center text-8xl">🤝</div>
           </div>
         </div>
       </section>
 
       {/* Newsletter */}
-      <section className="py-16 bg-brand-dark">
-        <div className="max-w-2xl mx-auto text-center px-4">
-          <h2 className="font-oswald text-3xl font-bold text-white mb-3">
-            Получайте лучшие предложения
-          </h2>
-          <p className="text-white/50 font-golos mb-6">
-            Подпишитесь на рассылку и узнавайте о скидках первыми
-          </p>
-          <div className="flex gap-3 max-w-md mx-auto">
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="Ваш email"
-              className="flex-1 px-4 py-3 rounded-xl bg-white/10 border border-white/20 text-white placeholder-white/40 font-golos text-sm focus:outline-none focus:border-brand-gold"
-            />
-            <button className="px-5 py-3 bg-brand-gold hover:bg-yellow-400 text-brand-dark font-bold font-golos rounded-xl transition-all hover:scale-105">
+      <section className="py-10 px-4" style={{ backgroundColor: "var(--ozon-blue)" }}>
+        <div className="max-w-xl mx-auto text-center">
+          <h2 className="font-oswald text-2xl font-bold text-white mb-2">Лучшие предложения на почту</h2>
+          <p className="text-white/60 font-golos text-sm mb-5">Узнавайте о скидках и новинках первыми</p>
+          <div className="flex gap-2">
+            <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="Ваш email"
+              className="flex-1 px-4 py-3 rounded-xl text-sm font-golos outline-none"
+              style={{ color: "var(--ozon-text)" }} />
+            <button className="px-5 py-3 font-bold font-golos rounded-xl hover:opacity-90 transition-all"
+              style={{ backgroundColor: "var(--ozon-orange)", color: "white" }}>
               Подписаться
             </button>
           </div>
@@ -245,20 +235,16 @@ export default function HomePage({ onNavigate, onAddToCart }: HomePageProps) {
       </section>
 
       {/* Footer */}
-      <footer className="bg-brand-dark border-t border-white/10 py-8 px-4 sm:px-6">
+      <footer className="bg-white border-t py-6 px-4" style={{ borderColor: "var(--ozon-border)" }}>
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-brand-gold flex items-center justify-center text-brand-dark font-oswald font-bold">А</div>
-            <span className="text-white font-oswald font-bold">АбхазМаркет</span>
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white font-oswald font-bold" style={{ backgroundColor: "var(--ozon-blue)" }}>А</div>
+            <span className="font-oswald font-bold" style={{ color: "var(--ozon-text)" }}>АбхазМаркет</span>
           </div>
-          <div className="text-white/30 text-sm font-golos text-center">
-            © 2026 АбхазМаркет. Первый маркетплейс Абхазии
-          </div>
+          <div className="text-sm font-golos" style={{ color: "var(--ozon-text-secondary)" }}>© 2026 АбхазМаркет. Первый маркетплейс Абхазии</div>
           <div className="flex gap-4">
-            {["Условия", "Конфиденциальность", "Помощь"].map((l) => (
-              <button key={l} className="text-white/40 hover:text-white text-sm font-golos transition-colors">
-                {l}
-              </button>
+            {["Условия", "Конфиденциальность", "Помощь"].map(l => (
+              <button key={l} className="text-sm font-golos hover:underline" style={{ color: "var(--ozon-text-secondary)" }}>{l}</button>
             ))}
           </div>
         </div>
